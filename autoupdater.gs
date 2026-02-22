@@ -166,7 +166,13 @@
     // Fetch up to 50 recent submissions
     const url = `https://codeforces.com/api/user.status?handle=${username}&from=1&count=50`;
     const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    const json = JSON.parse(response.getContentText());
+    
+    let json;
+    try {
+      json = JSON.parse(response.getContentText());
+    } catch (e) {
+      throw new Error("Invalid JSON from Codeforces. The API might be down (e.g., Error 502).");
+    }
     
     if (json.status !== "OK") {
       Logger.log("Error fetching Codeforces: " + (json.comment || "Unknown error"));
@@ -567,7 +573,13 @@
       // Let's assume < 10000 for now. Using count=10000.
       const url = `https://codeforces.com/api/user.status?handle=${username}&from=1&count=5000`;
       const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-      const json = JSON.parse(response.getContentText());
+      
+      let json;
+      try {
+        json = JSON.parse(response.getContentText());
+      } catch (e) {
+        throw new Error("Invalid JSON from Codeforces. The API might be down (e.g., Error 502).");
+      }
       if (json.status === "OK") {
         const solved = new Set();
         json.result.forEach(sub => {
