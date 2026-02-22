@@ -5,16 +5,75 @@
     
     const spreadsheetUrl = "https://docs.google.com/spreadsheets/d/1VKV9kIzNWpXArqZXlg6xTK3OgvFiqumf9UCqlna2iJA/edit#gid=0";
     const sheetName = "VAIBHAV S_AIML_TECH";
+    const backupSheetName = "Backup_" + sheetName;
     
+    const ss = SpreadsheetApp.openByUrl(spreadsheetUrl);
+    let mainSheet = ss.getSheetByName(sheetName);
+    
+    // --- BACKUP & SYNC PHASE ---
+    // 1. Ensure Backup Sheet exists
+    let backupSheet = ss.getSheetByName(backupSheetName);
+    if (!backupSheet) {
+      backupSheet = initializeBackupPhoenix(ss, mainSheet, backupSheetName);
+    } else {
+      // 2. Sync main sheet from backup (restore past data)
+      syncFromBackupPhoenix(mainSheet, backupSheet);
+    }
+
+    // --- FETCH & UPDATE PHASE ---
     const allSubmissions = getAllTodaySubmissionsPhoenix(leetcodeUsername, codeforcesUsername, atcoderUsername);
     
-    // Update the sheet with new submissions
-    updateSheetPhoenix(spreadsheetUrl, sheetName, allSubmissions);
+    // Update both sheets with new submissions
+    updateSheetPhoenix(mainSheet, backupSheet, allSubmissions);
     
     // Afterwards, update the dashboard stats with fresh data
-    const ss = SpreadsheetApp.openByUrl(spreadsheetUrl);
-    const sheet = ss.getSheetByName(sheetName);
-    updateDashboardStatsPhoenix(sheet, leetcodeUsername, codeforcesUsername, atcoderUsername);
+    updateDashboardStatsPhoenix(mainSheet, leetcodeUsername, codeforcesUsername, atcoderUsername);
+  }
+
+  // --- DATA BACKUP & SYNC ---
+
+  function initializeBackupPhoenix(ss, mainSheet, backupSheetName) {
+    Logger.log("Initializing backup sheet...");
+    // Duplicate the main sheet to preserve formatting, widths, merged cells entirely
+    const backupSheet = mainSheet.copyTo(ss);
+    backupSheet.setName(backupSheetName);
+    backupSheet.hideSheet(); // Hide it so user doesn't accidentally edit it
+    return backupSheet;
+  }
+
+  function syncFromBackupPhoenix(mainSheet, backupSheet) {
+    Logger.log("Syncing main sheet from backup...");
+    const lastBackupRow = backupSheet.getLastRow();
+    
+    // Clear all rows in main sheet
+    const lastMainRow = mainSheet.getLastRow();
+    if (lastMainRow >= 1) {
+      // Unmerge everything first to avoid partial merge errors
+      mainSheet.getRange(1, 1, lastMainRow + 10, mainSheet.getMaxColumns()).breakApart();
+      // Clear content and formatting
+      mainSheet.getRange(1, 1, lastMainRow + 10, mainSheet.getMaxColumns()).clear();
+    }
+    
+    if (lastBackupRow >= 1) {
+      const numRowsToCopy = lastBackupRow;
+      const sourceRange = backupSheet.getRange(1, 1, numRowsToCopy, backupSheet.getMaxColumns());
+      const targetRange = mainSheet.getRange(1, 1, numRowsToCopy, mainSheet.getMaxColumns());
+      
+      // Copy exact data, formatting, links
+      sourceRange.copyTo(targetRange);
+      
+      // Copy over merged ranges row by row to be safe
+      const merges = sourceRange.getMergedRanges();
+      for (let i = 0; i < merges.length; i++) {
+        const m = merges[i];
+        // Translate backup merge range relative row to main sheet range
+        const startRow = m.getRow();
+        const startCol = m.getColumn();
+        const numRows = m.getNumRows();
+        const numCols = m.getNumColumns();
+        mainSheet.getRange(startRow, startCol, numRows, numCols).merge();
+      }
+    }
   }
 
   // --- AGGREGATOR ---
@@ -309,16 +368,13 @@
 
   // --- SHEET UPDATER ---
 
-  function updateSheetPhoenix(spreadsheetUrl, sheetName, submissions) {
-    const ss = SpreadsheetApp.openByUrl(spreadsheetUrl);
-    const sheet = ss.getSheetByName(sheetName);
-    
-    if (!sheet) {
-      Logger.log("Sheet not found: " + sheetName);
+  function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
+    if (!mainSheet || !backupSheet) {
+      Logger.log("Main or Backup sheet not found.");
       return;
     }
     
-    const lastRow = sheet.getLastRow();
+    const lastRow = mainSheet.getLastRow();
     
     // 1. Process New Submissions if any
     if (submissions.length > 0) {
@@ -339,9 +395,9 @@
 
       if (lastRow > 0) {
         // Need RichTextValues to check existing links
-        const dataRange = sheet.getRange(1, 1, lastRow, 2);
+        const dataRange = mainSheet.getRange(1, 1, lastRow, 2);
         const dataValues = dataRange.getValues();
-        const richTextValues = sheet.getRange(1, 2, lastRow, 1).getRichTextValues(); // Fetch links from Col B
+        const richTextValues = mainSheet.getRange(1, 2, lastRow, 1).getRichTextValues(); // Fetch links from Col B
         
         let currentDateStr = "";
 
@@ -372,16 +428,16 @@
       }
       
       if (isTodayEntry) {
-        const dateCell = sheet.getRange(lastRow, 1);
+        const dateCell = mainSheet.getRange(lastRow, 1);
         const merged = dateCell.getMergedRanges();
         if (merged.length > 0) {
           dateMergeRange = merged[0];
           // Safe way: Read from the top row of the merge
           const topRow = dateMergeRange.getRow();
-          const countCell = sheet.getRange(topRow, 7); 
+          const countCell = mainSheet.getRange(topRow, 7); 
           existingCount = parseInt(countCell.getValue()) || 0;
         } else {
-          const countCell = sheet.getRange(lastRow, 7);
+          const countCell = mainSheet.getRange(lastRow, 7);
           existingCount = parseInt(countCell.getValue()) || 0;
         }
       }
@@ -403,7 +459,8 @@
               .setText(sub.title)
               .setLinkUrl(sub.url)
               .build();
-            sheet.getRange(rowToUpdate, 2).setRichTextValue(richText);
+            mainSheet.getRange(rowToUpdate, 2).setRichTextValue(richText);
+            backupSheet.getRange(rowToUpdate, 2).setRichTextValue(richText);
             Logger.log(`Updated link for existing submission: ${sub.title} at row ${rowToUpdate}`);
           } else {
             Logger.log(`Skipping update for ${sub.title}, link already current.`);
@@ -430,11 +487,18 @@
             .setText(sub.title)
             .setLinkUrl(sub.url)
             .build();
-          sheet.getRange(currentRow, 2).setRichTextValue(richText);
           
-          sheet.getRange(currentRow, 4).setValue(sub.difficulty);
-          sheet.getRange(currentRow, 5).setValue(sub.platform);
-          sheet.getRange(currentRow, 6).setValue(sub.topics);
+          // Write to Main Sheet
+          mainSheet.getRange(currentRow, 2).setRichTextValue(richText);
+          mainSheet.getRange(currentRow, 4).setValue(sub.difficulty);
+          mainSheet.getRange(currentRow, 5).setValue(sub.platform);
+          mainSheet.getRange(currentRow, 6).setValue(sub.topics);
+          
+          // Write to Backup Sheet
+          backupSheet.getRange(currentRow, 2).setRichTextValue(richText);
+          backupSheet.getRange(currentRow, 4).setValue(sub.difficulty);
+          backupSheet.getRange(currentRow, 5).setValue(sub.platform);
+          backupSheet.getRange(currentRow, 6).setValue(sub.topics);
         }
         
         let finalMergeStartRow = writeStartRow;
@@ -452,7 +516,7 @@
             // If existingCount > 0 and no merge, it was likely single row.
             // Scan up to verify start of today
             while (r > 0) {
-                const val = sheet.getRange(r, 1).getValue();
+                const val = mainSheet.getRange(r, 1).getValue();
                 let dStr = "";
                 if (val instanceof Date) dStr = Utilities.formatDate(val, Session.getScriptTimeZone(), "dd.MM.yyyy");
                 else if (val) dStr = String(val);
@@ -473,14 +537,26 @@
         } 
 
         const totalNumRows = finalMergeEndRow - finalMergeStartRow + 1;
-        const finalDateRange = sheet.getRange(finalMergeStartRow, 1, totalNumRows, 1);
+        
+        // Merge Date Column
+        const finalDateRange = mainSheet.getRange(finalMergeStartRow, 1, totalNumRows, 1);
         finalDateRange.merge().setValue(formattedDate).setVerticalAlignment("middle").setHorizontalAlignment("center");
         finalDateRange.setBorder(true, true, true, true, null, null);
+        
+        const backupDateRange = backupSheet.getRange(finalMergeStartRow, 1, totalNumRows, 1);
+        backupDateRange.merge().setValue(formattedDate).setVerticalAlignment("middle").setHorizontalAlignment("center");
+        backupDateRange.setBorder(true, true, true, true, null, null);
 
-        const finalCountRange = sheet.getRange(finalMergeStartRow, 7, totalNumRows, 1);
+        // Merge Count Column
+        const finalCountRange = mainSheet.getRange(finalMergeStartRow, 7, totalNumRows, 1);
         finalCountRange.merge().setValue(totalCount).setVerticalAlignment("middle").setHorizontalAlignment("center");
         finalCountRange.setBorder(true, true, true, true, null, null); 
-        Logger.log(`Added ${numNew} new submissions. Total for today: ${totalCount}`);
+        
+        const backupCountRange = backupSheet.getRange(finalMergeStartRow, 7, totalNumRows, 1);
+        backupCountRange.merge().setValue(totalCount).setVerticalAlignment("middle").setHorizontalAlignment("center");
+        backupCountRange.setBorder(true, true, true, true, null, null);
+
+        Logger.log(`Added ${numNew} new submissions in main and backup sheets. Total for today: ${totalCount}`);
       } else {
         Logger.log("No new unique submissions to add.");
       }
