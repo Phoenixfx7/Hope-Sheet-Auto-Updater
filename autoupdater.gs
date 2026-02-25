@@ -1,79 +1,32 @@
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('CP Tracker')
-      .addItem('Sync Current Sheet', 'syncCurrentSheetPhoenix')
-      .addItem('Sync All Users', 'syncAllUsersPhoenix')
-      .addToUi();
-}
+/**
+ * Main entry point for the CP Tracker Library 
+ * @param {Object} config - The configuration object
+ * @param {string} config.sheetName - The student's Tab Name
+ * @param {string} config.leetcode - The student's LeetCode username
+ * @param {string} config.codeforces - The student's Codeforces username
+ * @param {string} config.atcoder - The student's AtCoder username
+ * @param {string} config.masterSheetId - The Spreadsheet App ID of the master workbook
+ */
+function runSync(config) {
+  const { sheetName, leetcode, codeforces, atcoder, masterSheetId } = config;
 
-function syncAllUsersPhoenix() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const configSheet = ss.getSheetByName("Config");
-  
-  if (!configSheet) {
-    Logger.log("Config sheet not found. Please create a sheet named 'Config'.");
+  if (!masterSheetId || !sheetName) {
+    Logger.log("Missing masterSheetId or sheetName in config.");
     return;
   }
   
-  const lastRow = configSheet.getLastRow();
-  if (lastRow < 2) return; 
-  
-  // Columns: A=Sheet Name, B=LeetCode, C=Codeforces, D=AtCoder, E=Active status
-  const data = configSheet.getRange(2, 1, lastRow - 1, 5).getValues();
-  
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    const sheetName = String(row[0]).trim();
-    const lcUser = String(row[1]).trim();
-    const cfUser = String(row[2]).trim();
-    const acUser = String(row[3]).trim();
-    const isActive = String(row[4]).trim().toLowerCase();
-    
-    if (isActive === "yes" || isActive === "true") {
-       if (sheetName) {
-         Logger.log(`Syncing user: ${sheetName}`);
-         processSingleUserPhoenix(ss, sheetName, lcUser, cfUser, acUser);
-       }
-    }
-  }
-}
-
-function syncCurrentSheetPhoenix() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const activeSheet = ss.getActiveSheet();
-  const sheetName = activeSheet.getName();
-  
-  const configSheet = ss.getSheetByName("Config");
-  if (!configSheet) {
-    SpreadsheetApp.getUi().alert("Error: 'Config' sheet not found.");
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(masterSheetId);
+  } catch (e) {
+    Logger.log("Could not open Spreadsheet by ID. Check permissions: " + e.toString());
     return;
   }
-  
-  const lastRow = configSheet.getLastRow();
-  if (lastRow < 2) return;
-  const data = configSheet.getRange(2, 1, lastRow - 1, 5).getValues();
-  
-  let found = false;
-  for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0]).trim() === sheetName) {
-      Logger.log(`Syncing current sheet: ${sheetName}`);
-      processSingleUserPhoenix(ss, sheetName, String(data[i][1]).trim(), String(data[i][2]).trim(), String(data[i][3]).trim());
-      found = true;
-      SpreadsheetApp.getUi().alert("Sync Complete", `Successfully synced ${sheetName}!`, SpreadsheetApp.getUi().ButtonSet.OK);
-      break;
-    }
-  }
-  
-  if (!found) {
-    SpreadsheetApp.getUi().alert("Sheet Not Found", `Could not find configuration for ${sheetName} in the Config tab.`, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
 
-function processSingleUserPhoenix(ss, sheetName, leetcodeUsername, codeforcesUsername, atcoderUsername) {
   const mainSheet = ss.getSheetByName(sheetName);
   
   if (!mainSheet) {
-    Logger.log(`Main sheet '${sheetName}' not found. Skipping.`);
+    Logger.log(`Main sheet '${sheetName}' not found.`);
     return;
   }
   
@@ -83,14 +36,18 @@ function processSingleUserPhoenix(ss, sheetName, leetcodeUsername, codeforcesUse
   if (!backupSheet) {
     backupSheet = initializeBackupPhoenix(ss, mainSheet, backupSheetName);
   } else {
+    // If user unhid the sheet manually, re-hide it automatically
+    if (!backupSheet.isSheetHidden()) {
+      backupSheet.hideSheet();
+    }
     syncFromBackupPhoenix(mainSheet, backupSheet);
   }
 
-  const allSubmissions = getAllTodaySubmissionsPhoenix(leetcodeUsername, codeforcesUsername, atcoderUsername);
+  const allSubmissions = getAllTodaySubmissionsPhoenix(leetcode, codeforces, atcoder);
   
   updateSheetPhoenix(mainSheet, backupSheet, allSubmissions);
   
-  updateDashboardStatsPhoenix(mainSheet, leetcodeUsername, codeforcesUsername, atcoderUsername);
+  updateDashboardStatsPhoenix(mainSheet, leetcode, codeforces, atcoder);
 }
 
 function initializeBackupPhoenix(ss, mainSheet, backupSheetName) {
@@ -98,6 +55,16 @@ function initializeBackupPhoenix(ss, mainSheet, backupSheetName) {
   const backupSheet = mainSheet.copyTo(ss);
   backupSheet.setName(backupSheetName);
   backupSheet.hideSheet(); 
+  
+  // Protect the sheet: only the user who runs the script and staff owners can edit it
+  try {
+    const protection = backupSheet.protect().setDescription('Backup Protection');
+    const editors = protection.getEditors();
+    protection.removeEditors(editors);
+  } catch(e) {
+    Logger.log("Could not apply protection to backup sheet. User might not have permission to change protections: " + e.toString());
+  }
+
   return backupSheet;
 }
 
