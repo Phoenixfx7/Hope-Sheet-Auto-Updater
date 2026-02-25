@@ -485,6 +485,7 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
     
     if (numNew > 0) {
       const writeStartRow = lastRow + 1; 
+      const templateDiff = mainSheet.getRange(14, 4);
 
       for (let i = 0; i < numNew; i++) {
         const sub = submissionsToAdd[i];
@@ -506,11 +507,18 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
         mainSheet.getRange(currentRow, 5).setValue(sub.platform);
         mainSheet.getRange(currentRow, 6).setValue(sub.topics);
         
+        const targetDiff = mainSheet.getRange(currentRow, 4);
+        templateDiff.copyTo(targetDiff, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+        targetDiff.setValue(sub.difficulty);
+        
         backupSheet.getRange(currentRow, 2).setRichTextValue(problemRichText);
         backupSheet.getRange(currentRow, 3).setRichTextValue(submissionRichText).setHorizontalAlignment("center");
-        backupSheet.getRange(currentRow, 4).setValue(sub.difficulty);
         backupSheet.getRange(currentRow, 5).setValue(sub.platform);
         backupSheet.getRange(currentRow, 6).setValue(sub.topics);
+        
+        const bTargetDiff = backupSheet.getRange(currentRow, 4);
+        templateDiff.copyTo(bTargetDiff, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+        bTargetDiff.setValue(sub.difficulty);
       }
       
       // Add borders to the inserted Problem Data block (Cols B through F)
@@ -555,13 +563,12 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
       backupDateRange.setBorder(true, true, true, true, null, null);
 
       const finalCountRange = mainSheet.getRange(finalMergeStartRow, 7, totalNumRows, 1);
-      finalCountRange.merge().setValue(totalCount).setVerticalAlignment("middle").setHorizontalAlignment("center");
+      finalCountRange.merge().setValue(totalCount).setFontWeight("bold").setVerticalAlignment("middle").setHorizontalAlignment("center");
       finalCountRange.setBorder(true, true, true, true, null, null); 
       
       const backupCountRange = backupSheet.getRange(finalMergeStartRow, 7, totalNumRows, 1);
-      backupCountRange.merge().setValue(totalCount).setVerticalAlignment("middle").setHorizontalAlignment("center");
+      backupCountRange.merge().setValue(totalCount).setFontWeight("bold").setVerticalAlignment("middle").setHorizontalAlignment("center");
       backupCountRange.setBorder(true, true, true, true, null, null);
-
       Logger.log(`Added ${numNew} new submissions in main and backup sheets. Total for today: ${totalCount}`);
     } else {
       Logger.log("No new unique submissions to add.");
