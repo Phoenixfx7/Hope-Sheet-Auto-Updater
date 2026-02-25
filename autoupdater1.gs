@@ -185,6 +185,7 @@ function getLeetCodeSubmissionsPhoenix(username) {
           id: sub.id,
           title: sub.title,
           url: `https://leetcode.com/submissions/detail/${sub.id}/`,
+          problemUrl: `https://leetcode.com/problems/${sub.titleSlug}/`,
           timestamp: parseInt(sub.timestamp),
           difficulty: details.difficulty,
           platform: "Leetcode",
@@ -271,6 +272,7 @@ function getCodeforcesSubmissionsPhoenix(username) {
           id: sub.id,
           title: `${sub.problem.name} (${sub.problem.index})`,
           url: `https://codeforces.com/contest/${sub.problem.contestId}/submission/${sub.id}`,
+          problemUrl: `https://codeforces.com/contest/${sub.problem.contestId}/problem/${sub.problem.index}`,
           timestamp: sub.creationTimeSeconds,
           difficulty: difficulty,
           platform: "Codeforces Contest", 
@@ -321,6 +323,7 @@ function getAtCoderSubmissionsPhoenix(username) {
         id: sub.id,
         title: sub.problem_id, 
         url: `https://atcoder.jp/contests/${sub.contest_id}/submissions/${sub.id}`,
+        problemUrl: `https://atcoder.jp/contests/${sub.contest_id}/tasks/${sub.problem_id}`,
         timestamp: sub.epoch_second,
         difficulty: difficulty,
         platform: "Atcoder", 
@@ -395,7 +398,8 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
     if (lastRow > 0) {
       const dataRange = mainSheet.getRange(1, 1, lastRow, 2);
       const dataValues = dataRange.getValues();
-      const richTextValues = mainSheet.getRange(1, 2, lastRow, 1).getRichTextValues(); 
+      const fallbackRichTextValues = mainSheet.getRange(1, 2, lastRow, 1).getRichTextValues(); 
+      const submissionRichTextValues = mainSheet.getRange(1, 3, lastRow, 1).getRichTextValues(); 
       
       let currentDateStr = "";
 
@@ -416,7 +420,12 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
         }
         if (currentDateStr === formattedDate) {
             if (title) {
-              const existingUrl = richTextValues[i][0].getLinkUrl();
+              let existingUrl = "";
+              if (submissionRichTextValues[i][0].getLinkUrl()) {
+                  existingUrl = submissionRichTextValues[i][0].getLinkUrl();
+              } else {
+                  existingUrl = fallbackRichTextValues[i][0].getLinkUrl();
+              }
               existingTitles.set(title, { row: i + 1, url: existingUrl }); 
             }
             isTodayEntry = true;
@@ -449,12 +458,20 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
         const existingData = existingTitles.get(sub.title);
         if (existingData.url !== sub.url) {
           const rowToUpdate = existingData.row;
-          const richText = SpreadsheetApp.newRichTextValue()
+          const problemRichText = SpreadsheetApp.newRichTextValue()
             .setText(sub.title)
+            .setLinkUrl(sub.problemUrl || sub.url)
+            .build();
+            
+          const submissionRichText = SpreadsheetApp.newRichTextValue()
+            .setText("View Submission")
             .setLinkUrl(sub.url)
             .build();
-          mainSheet.getRange(rowToUpdate, 2).setRichTextValue(richText);
-          backupSheet.getRange(rowToUpdate, 2).setRichTextValue(richText);
+
+          mainSheet.getRange(rowToUpdate, 2).setRichTextValue(problemRichText);
+          mainSheet.getRange(rowToUpdate, 3).setRichTextValue(submissionRichText).setHorizontalAlignment("center");
+          backupSheet.getRange(rowToUpdate, 2).setRichTextValue(problemRichText);
+          backupSheet.getRange(rowToUpdate, 3).setRichTextValue(submissionRichText).setHorizontalAlignment("center");
           Logger.log(`Updated link for existing submission: ${sub.title} at row ${rowToUpdate}`);
         } else {
           Logger.log(`Skipping update for ${sub.title}, link already current.`);
@@ -473,20 +490,24 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
         const sub = submissionsToAdd[i];
         const currentRow = writeStartRow + i;
         
-        const richText = SpreadsheetApp.newRichTextValue()
+        const problemRichText = SpreadsheetApp.newRichTextValue()
           .setText(sub.title)
+          .setLinkUrl(sub.problemUrl || sub.url)
+          .build();
+          
+        const submissionRichText = SpreadsheetApp.newRichTextValue()
+          .setText("View Submission")
           .setLinkUrl(sub.url)
           .build();
         
-        mainSheet.getRange(currentRow, 2).setRichTextValue(richText);
-        // Merge Columns B and C, and center align
-        mainSheet.getRange(currentRow, 2, 1, 2).mergeAcross().setHorizontalAlignment("center");
+        mainSheet.getRange(currentRow, 2).setRichTextValue(problemRichText);
+        mainSheet.getRange(currentRow, 3).setRichTextValue(submissionRichText).setHorizontalAlignment("center");
         mainSheet.getRange(currentRow, 4).setValue(sub.difficulty);
         mainSheet.getRange(currentRow, 5).setValue(sub.platform);
         mainSheet.getRange(currentRow, 6).setValue(sub.topics);
         
-        backupSheet.getRange(currentRow, 2).setRichTextValue(richText);
-        backupSheet.getRange(currentRow, 2, 1, 2).mergeAcross().setHorizontalAlignment("center");
+        backupSheet.getRange(currentRow, 2).setRichTextValue(problemRichText);
+        backupSheet.getRange(currentRow, 3).setRichTextValue(submissionRichText).setHorizontalAlignment("center");
         backupSheet.getRange(currentRow, 4).setValue(sub.difficulty);
         backupSheet.getRange(currentRow, 5).setValue(sub.platform);
         backupSheet.getRange(currentRow, 6).setValue(sub.topics);
