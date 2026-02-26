@@ -33,9 +33,10 @@ function myDailySync() {
     leetcode: "your_leetcode_username",
     codeforces: "your_codeforces_username",
     atcoder: "your_atcoder_username",
-    masterSheetId: "1VKV9kIzNWpXArqZXlg6xTK3OgvFiqumf9UCqlna2iJA"
+    masterSheetId: "1uax19yW2HZgKtcG4c-iwwHcKyEAhZ874m7DMXIj8ZWlnhUu_6jjUhZBv"
   });`
 }
+
 
 ```
 
