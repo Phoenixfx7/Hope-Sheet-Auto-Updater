@@ -1,66 +1,60 @@
 # Auto Updater for CP Tracker Google Sheet
 
-A scalable Google Apps Script solution to automatically fetch daily accepted submissions from LeetCode, Codeforces, and AtCoder and log them directly into a designated Google Sheet tab for each user. 
+This script automatically fetches your daily accepted submissions from LeetCode, Codeforces, and AtCoder, and logs them directly into your designated tab on the Master Google Sheet.
 
-It keeps track of the problems solved, difficulties, topics/tags, generates clickable submission links, and avoids row duplication by cross-referencing past submissions.
+It tracks the problems you've solved, their difficulties, topics, and automatically generates clickable submission links, avoiding any row duplication.
 
----
+## Student Setup Instructions
 
-## Features
-- **Multi-Platform:** Supports LeetCode (GraphQL), Codeforces (API), and AtCoder (Kenkoooo API).
-- **Auto Data Validation:** Copies existing Dropdown Chips (like "Easy", "Medium", "Hard") from a designated master cell on the sheet to keep your tracker looking beautiful.
-- **Robust Backup & Sync System:** Maintains a separate hidden Backup Sheet mirror for each student. If a student's public sheet gets corrupted or tampered with, the script will self-correct by resyncing from the pristine backup state every runtime.
-- **Library Architecture:** Designed to be hosted centrally by a repository maintainer/admin. End users simply import it via a Library ID within their own Google Apps Script account, thus executing API fetching without bumping into execution timeouts or API rate limits on a centralized server.
+To set this up, you need to create a simple Google Apps Script that calls the central `AutomaticCPTracker` Library. This ensures the script runs under your own Google account, avoiding execution timeouts or rate limits on the master sheet.
 
----
-
-## Project Files
-- `autoupdater.gs`: The standard library that tracks all 3 platforms, merges the Problem and Submission links into a single unified Markdown-style column (Col B:C merged).
-- `autoupdater1.gs`: An alternative version of the script which generates **separate** columns for the Problem URL (Col B) and the actual Submission URL (Col C) instead of merging them. 
-
----
-
-## Admin / Maintainer Setup
-
-If you are setting this up as the "Master Script" (e.g., maintaining the open-source library for a group of students):
-
+### Step 1: Create Your Script
 1. Go to [script.google.com](https://script.google.com/) and click **New Project**.
-2. Copy and paste the contents of `autoupdater.gs` (or `autoupdater1.gs` if you prefer the split column layout) into your `Code.gs` file.
-3. Save the project and give it a name.
-4. Click **Deploy > New Deployment**.
-5. Choose **Library** as the type. Add a description, and deploy.
-6. Share your project's **Script ID** (found in Project Settings gear icon > Script ID) with your users/students. Have them follow the next step.
+2. Give your project a name (e.g., "My CP Tracker").
 
-## End User / Student Setup
+### Step 2: Import the Library
+1. On the left sidebar, click the **+** icon next to **Libraries**.
+2. Paste the following **Script ID** and click **Look up**:
+   ```
+   1loVbfwQfQtWkaqkJPnU55AdH7x0FcvCExXaK5Nw4V13YNK6wNC9FtWcO
+   ```
+3. Ensure the version is set to the latest available (or `HEAD`), and make sure the **Identifier** is exactly: `AutomaticCPTracker`.
+4. Click **Add**.
 
-If your admin has given you their Script Library ID, here is how you automate your own specific Google Sheet Tab.
+### Step 3: Paste the Configuration Template
+Delete any default code in your `Code.gs` file and paste the following 5-line configuration block. 
 
-1. Create a pristine standalone script at [script.google.com](https://script.google.com/). 
-2. Click the **+** icon next to **Libraries** on the left menu.
-3. Paste the **Script ID** provided by your admin and click **Look up**. Select the latest version and click **Add**. *(Assume the identifier defaults to the name your admin chose, for example, `CPTracker`)*.
-4. Replace the code in your script space with the following block:
+*Make sure to carefully replace the placeholder text with your actual usernames and your tab's exact name.*
 
 ```javascript
 function executeSync() {
   const config = {
-    masterSheetId: "1YOUR_SPREADSHEET_ID_HEREQ2w_3e4r", // The ID from your Google Sheet URL
-    sheetName: "YOUR_SHEET_TAB_NAME",
+    masterSheetId: "YOUR_MASTER_SPREADSHEET_ID", // The ID from the shared Master Google Sheet URL
+    sheetName: "YOUR_SHEET_TAB_NAME", // Exactly as it appears on the bottom tab
     leetcode: "your_leetcode_username",
     codeforces: "your_codeforces_username",
     atcoder: "your_atcoder_username"
   };
 
-  // Run the library's main sync function using your configured variables.
-  // Replace 'CPTracker' with whatever the Library Identifier name is.
-  CPTracker.runSync(config); 
+  AutomaticCPTracker.runSync(config); 
 }
 ```
 
-5. **Authorize the script!** Click the **Run** button manually once to grant the script read/write access to your Spreadsheet. (Google will warn you that the app is unverified; click Advanced > Go to Script).
-6. **Set up automation:** Click on the **Triggers (Clock)** icon on the left sidebar. Add a new trigger:
-   - Choose function: `executeSync`
-   - Event source: `Time-driven`
-   - Type: `Day timer`
-   - Time of day: `11pm to Midnight` (Or any time you prefer).
-   
-You are done! The library will automatically pull your daily history without any further required input.
+### Step 4: Authorize and Run
+1. Click the **Run** button manually at the top of the editor.
+2. Google will ask you to authorize the script to access your spreadsheets. Follow the prompts. *(If it says the app is unverified, click **Advanced** -> **Go to [Project Name]**).*
+3. Verify that your sheet tab has been successfully populated with your submissions for the day.
+
+### Step 5: Automate It (Important!)
+You don't want to click "Run" every day. Let's set it on a timer.
+1. Click the **Triggers** icon (it looks like a clock) on the left sidebar menu.
+2. Click **+ Add Trigger** in the bottom right corner.
+3. Configure the trigger as follows:
+   - **Choose which function to run:** `executeSync`
+   - **Choose which deployment should run:** `Head`
+   - **Select event source:** `Time-driven`
+   - **Select type of time based trigger:** `Day timer`
+   - **Select time of day:** Choose a convenient time (e.g., `11pm to Midnight`).
+4. Click **Save**.
+
+You are officially done! The library will automatically pull your daily CP history into the shared Master Sheet.
