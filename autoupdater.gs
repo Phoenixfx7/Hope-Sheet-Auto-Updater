@@ -469,6 +469,7 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
     if (numNew > 0) {
       const writeStartRow = lastRow + 1; 
       const templateDiff = mainSheet.getRange(14, 4);
+      const templatePlatform = mainSheet.getRange(14, 5);
 
       for (let i = 0; i < numNew; i++) {
         const sub = submissionsToAdd[i];
@@ -487,7 +488,10 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
         templateDiff.copyTo(targetDiff, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
         targetDiff.setValue(sub.difficulty);
         
-        mainSheet.getRange(currentRow, 5).setValue(sub.platform);
+        const targetPlatform = mainSheet.getRange(currentRow, 5);
+        templatePlatform.copyTo(targetPlatform, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+        targetPlatform.setValue(sub.platform);
+        
         mainSheet.getRange(currentRow, 6).setValue(sub.topics);
         
         backupSheet.getRange(currentRow, 2).setRichTextValue(richText);
@@ -497,7 +501,10 @@ function updateSheetPhoenix(mainSheet, backupSheet, submissions) {
         templateDiff.copyTo(bTargetDiff, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
         bTargetDiff.setValue(sub.difficulty);
         
-        backupSheet.getRange(currentRow, 5).setValue(sub.platform);
+        const bTargetPlatform = backupSheet.getRange(currentRow, 5);
+        templatePlatform.copyTo(bTargetPlatform, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+        bTargetPlatform.setValue(sub.platform);
+        
         backupSheet.getRange(currentRow, 6).setValue(sub.topics);
       }
       
