@@ -50,7 +50,7 @@ You don't want to click "Run" every day. Let's set it on a timer.
 1. Click the **Triggers** icon (it looks like a clock) on the left sidebar menu.
 2. Click **+ Add Trigger** in the bottom right corner.
 3. Configure the trigger as follows:
-   - **Choose which function to run:** `executeSync`
+   - **Choose which function to run:** `myDailySync`
    - **Choose which deployment should run:** `Head`
    - **Select event source:** `Time-driven`
    - **Select type of time based trigger:** `Day timer`
