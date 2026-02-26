@@ -16,7 +16,7 @@ To set this up, you need to create a simple Google Apps Script that calls the ce
 1. On the left sidebar, click the **+** icon next to **Libraries**.
 2. Paste the following **Script ID** and click **Look up**:
    ```
-   1loVbfwQfQtWkaqkJPnU55AdH7x0FcvCExXaK5Nw4V13YNK6wNC9FtWcO
+   1uax19yW2HZgKtcG4c-iwwHcKyEAhZ874m7DMXIj8ZWlnhUu_6jjUhZBv
    ```
 3. Ensure the version is set to the latest available (or `HEAD`), and make sure the **Identifier** is exactly: `AutomaticCPTracker`.
 4. Click **Add**.
