@@ -27,17 +27,16 @@ Delete any default code in your `Code.gs` file and paste the following 5-line co
 *Make sure to carefully replace the placeholder text with your actual usernames and your tab's exact name.*
 
 ```javascript
-function executeSync() {
-  const config = {
-    masterSheetId: "YOUR_MASTER_SPREADSHEET_ID", // The ID from the shared Master Google Sheet URL
-    sheetName: "YOUR_SHEET_TAB_NAME", // Exactly as it appears on the bottom tab
+function myDailySync() {
+  AutomaticCPTracker.runSync({
+    sheetName: "YOUR_SHEET_NAME",
     leetcode: "your_leetcode_username",
     codeforces: "your_codeforces_username",
-    atcoder: "your_atcoder_username"
-  };
-
-  AutomaticCPTracker.runSync(config); 
+    atcoder: "your_atcoder_username",
+    masterSheetId: "1VKV9kIzNWpXArqZXlg6xTK3OgvFiqumf9UCqlna2iJA"
+  });`
 }
+
 ```
 
 ### Step 4: Authorize and Run
