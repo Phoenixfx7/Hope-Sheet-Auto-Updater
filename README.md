@@ -4,6 +4,9 @@ This script automatically fetches your daily accepted submissions from LeetCode,
 
 It tracks the problems you've solved, their difficulties, topics, and automatically generates clickable submission links, avoiding any row duplication.
 
+## Expected Format
+![CP Tracker Format](screenshot.png)
+
 ## Student Setup Instructions
 
 To set this up, you need to create a simple Google Apps Script that calls the central `AutomaticCPTracker` Library. This ensures the script runs under your own Google account, avoiding execution timeouts or rate limits on the master sheet.
