@@ -60,4 +60,9 @@ You don't want to click "Run" every day. Let's set it on a timer.
    - **Select time of day:** Choose a convenient time (e.g., `11pm to Midnight`).
 4. Click **Save**.
 
+### Manual Changes
+If you want to intentionally make any manual changes to your sheet, you must first make them in the **hidden backup sheet** and then run the script. To access the backup sheet:
+1. Go to **View** -> **Hidden Sheets**.
+2. Select your backup sheet from the list.
+
 You are officially done! The library will automatically pull your daily CP history into the shared Master Sheet.
